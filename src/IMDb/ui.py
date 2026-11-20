@@ -1,11 +1,13 @@
 # -*- coding: UTF-8 -*-
+from __future__ import print_function
+import six
 from json import dumps, loads
 from os import remove
 from os.path import splitext
-from re import sub
+from re import sub, LOCALE, UNICODE
 from shutil import copy
 from time import strftime, strptime
-from urllib.parse import quote_plus
+from six.moves.urllib.parse import quote_plus
 from twisted.internet.threads import deferToThread
 
 from enigma import ePicLoad, eServiceCenter, eServiceReference
@@ -109,7 +111,7 @@ def get(json, path, default=""):
 		if key not in json:
 			return default
 		json = json[key]
-	if isinstance(json, str):
+	if isinstance(json, six.text_type):
 		# It's possible UTF-8 has itself been converted to UTF-8
 		# (e.g. the storyline of "As You Want Me" / "Come mi vuoi",
 		# although it seems that one's been fixed)...
@@ -122,6 +124,8 @@ def get(json, path, default=""):
 			json = json.encode("latin1").decode("cp1252")
 		except Exception:
 			pass
+		if six.PY2:
+			json = json.encode("utf8")
 	return json
 
 # High‑quality translation using Google Translate (no API key required)
@@ -871,7 +875,9 @@ query TitleReviewsRefine {
 
 	def gotReviews(self, response):
 		self["statusbar"].setText(_("Parsing reviews..."))
-		self.reviewsJSON = response.content.decode("utf8")
+		self.reviewsJSON = response.content
+		if six.PY3:
+			self.reviewsJSON = self.reviewsJSON.decode("utf8")
 		try:
 			reviews = loads(self.reviewsJSON)['data']['title']['reviews']['edges']
 		except Exception as e:
@@ -915,7 +921,9 @@ query TitleReviewsRefine {
 
 	def IMDBparse(self, response):
 		self["statusbar"].setText(_("IMDb Re-Download completed"))
-		self.json = response.content.decode("utf8")
+		self.json = response.content
+		if six.PY3:
+			self.json = self.json.decode("utf8")
 		if self.json.startswith('{"errors'):
 			self["detailslabel"].setText(_("IMDb title failed!"))
 			print("[IMDb] error getting title", self.json)
@@ -1456,7 +1464,7 @@ query TitleReviewsRefine {
 		self.reviews = []
 		self.spoilers = False
 		safeRemove("/tmp/poster.jpg", "/tmp/poster-big.jpg")
-		if not isinstance(self.eventName, str):
+		if not isinstance(self.eventName, six.string_types):
 			self["statusbar"].setText("")
 			return
 		if not self.eventName:
@@ -1500,7 +1508,7 @@ query TitleReviewsRefine {
 	def IMDBqueryGraphQL(self, response):
 		self["statusbar"].setText(_("IMDb Download completed"))
 		try:
-			data = loads(response.content.decode("utf8"))
+			data = loads(response.content)
 			searchresults = data["data"]["mainSearch"]["edges"]
 		except Exception as e:
 			self["detailslabel"].setText(_("IMDb query failed!"))
@@ -1571,7 +1579,7 @@ query TitleReviewsRefine {
 			if typ:
 				extras.append(typ)
 			if genres:
-				extras.append(genres)
+				extras.append(six.ensure_str(genres))
 			if extras:
 				title += " (%s)" % "; ".join(extras)
 			plot = get(x, ("plot", "plotText", "plainText"))
@@ -1742,5 +1750,10 @@ def movielistSearch(session, serviceref, **kwargs):
 	eventName = info and info.getName(serviceref) or ''
 	(root, ext) = splitext(eventName)
 	if ext in KNOWN_EXTENSIONS or ext in KNOWN_EXTENSIONS2:
-		eventName = sub(r"[\W_]+", ' ', root, 0)
+		if six.PY2:
+			root = root.decode("utf8")
+			eventName = sub(r"[\W_]+", ' ', root, 0, LOCALE | UNICODE)
+			eventName = eventName.encode("utf8")
+		else:
+			eventName = sub(r"[\W_]+", ' ', root, 0)
 	session.open(IMDB, eventName)
