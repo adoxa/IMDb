@@ -14,7 +14,6 @@ config.plugins.imdb.ignore_tags = ConfigText(visible_width=50, fixed_size=False)
 config.plugins.imdb.showlongmenuinfo = ConfigYesNo(default=False)
 config.plugins.imdb.showepisoderesults = ConfigYesNo(default=False)
 config.plugins.imdb.showepisodeinfo = ConfigYesNo(default=False)
-config.plugins.imdb.translate_texts = ConfigYesNo(default=False)
 
 
 def eventinfo(session, eventName="", **kwargs):
