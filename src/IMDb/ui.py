@@ -28,7 +28,7 @@ from Screens.InfoBar import MoviePlayer
 from Screens.Screen import Screen
 from Screens.Setup import Setup
 from Screens.VirtualKeyBoard import VirtualKeyBoard
-from Tools.Directories import SCOPE_PLUGINS, fileExists, isPluginInstalled, resolveFilename
+from Tools.Directories import SCOPE_PLUGINS, fileExists, resolveFilename
 
 from . import _, ngettext
 from .plugin import config
@@ -1339,15 +1339,6 @@ query TitleReviewsRefine {
 					(_("Save current Poster and Details as .txt"), self.savePosterTxtDetails),
 				))
 
-		if isPluginInstalled("YTTrailer"):
-			list.extend((
-				(_("Play Trailer"), self.openYttrailer),
-				(_("Search Trailer"), self.searchYttrailer),
-			))
-
-		if isPluginInstalled("SubsSupport"):
-			list.append((_("SubsSupport search"), self.searchSubsSupport))
-
 		for video in self.videos:
 			list.append((video[0], self.playVideo, video[1], video[2]))
 
@@ -1431,40 +1422,6 @@ query TitleReviewsRefine {
 			self.synopsisTxt and "\n".join(("", _("Synopsis"), "", self.synopsisTxt, "")) or "",
 			self.reviewsTxt and "\n".join(("", _("User reviews"), "", self.reviewsTxt, "")) or ""
 		)
-
-	def openYttrailer(self):
-		try:
-			from Plugins.Extensions.YTTrailer.plugin import YTTrailer, baseEPGSelection__init__
-		except ImportError:
-			pass
-		if baseEPGSelection__init__ is None:
-			return
-
-		ytTrailer = YTTrailer(self.session)
-		ytTrailer.showTrailer(self.eventName)
-
-	def searchYttrailer(self):
-		try:
-			from Plugins.Extensions.YTTrailer.plugin import YTTrailerList, baseEPGSelection__init__
-		except ImportError:
-			pass
-		if baseEPGSelection__init__ is None:
-			return
-
-		self.session.open(YTTrailerList, self.eventName)
-
-	def searchSubsSupport(self):
-		try:
-			from Plugins.Extensions.SubsSupport.subtitles import E2SubsSeeker, SubsSearch, initSubsSettings
-		except ImportError:
-			self["statusbar"].setText(_("SubsSupport import failed"))
-			return
-
-		settings = initSubsSettings().search
-		titles = [self.eventName]
-		if self.originalName != self.eventName:
-			titles.append(self.originalName)
-		self.session.open(SubsSearch, E2SubsSeeker(self.session, settings), settings, searchTitles=titles, standAlone=True)
 
 	def openVirtualKeyBoard(self):
 		self.session.openWithCallback(
