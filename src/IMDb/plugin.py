@@ -42,7 +42,7 @@ def __getattr__(name):
 	if name in ("IMDB", "IMDbLCDScreen", "IMDbNetwork", "IMDbPlayer", "IMDbSetup", "downloadPage", "get", "getPage", "imdb_translate", "postGraphQL", "quoteEventName", "safeRemove", "savePage", "text2label"):
 		from . import ui  # Compatibility exports are resolved only when explicitly requested.
 		return getattr(ui, name)
-	raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+	raise AttributeError("module %r has no attribute %r" % (__name__, name))
 
 
 pluginlist = (
