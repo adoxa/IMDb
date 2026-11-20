@@ -3,7 +3,7 @@ from Components.config import ConfigSubsection, ConfigText, ConfigYesNo, config
 from Plugins.Plugin import PluginDescriptor
 
 from . import _
-
+from .ui import IMDB
 
 config.plugins.imdb = ConfigSubsection()
 config.plugins.imdb.showinplugins = ConfigYesNo(default=False)
@@ -34,14 +34,6 @@ def setup(session, **kwargs):
 def movielistSearch(session, serviceref, **kwargs):
 	from .ui import movielistSearch as openScreen  # Load the UI only when this entry point is used.
 	return openScreen(session, serviceref, **kwargs)
-
-
-def __getattr__(name):
-	# Preserve class imports used by EPG, EMC and other plugins without loading the UI at discovery.
-	if name in ("IMDB", "IMDbLCDScreen", "IMDbNetwork", "IMDbPlayer", "IMDbSetup", "downloadPage", "get", "getPage", "imdb_translate", "postGraphQL", "quoteEventName", "safeRemove", "savePage", "text2label"):
-		from . import ui  # Compatibility exports are resolved only when explicitly requested.
-		return getattr(ui, name)
-	raise AttributeError("module %r has no attribute %r" % (__name__, name))
 
 
 pluginlist = (
