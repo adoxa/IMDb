@@ -1,13 +1,12 @@
 # -*- coding: UTF-8 -*-
 from __future__ import print_function
-import six
 from json import dumps, loads
 from os import remove
 from os.path import splitext
 from re import sub, LOCALE, UNICODE
 from shutil import copy
 from time import strftime, strptime
-from six.moves.urllib.parse import quote_plus
+from urllib import quote_plus
 from twisted.internet.threads import deferToThread
 
 from enigma import ePicLoad, eServiceCenter, eServiceReference
@@ -111,7 +110,7 @@ def get(json, path, default=""):
 		if key not in json:
 			return default
 		json = json[key]
-	if isinstance(json, six.text_type):
+	if isinstance(json, unicode):
 		# It's possible UTF-8 has itself been converted to UTF-8
 		# (e.g. the storyline of "As You Want Me" / "Come mi vuoi",
 		# although it seems that one's been fixed)...
@@ -124,8 +123,7 @@ def get(json, path, default=""):
 			json = json.encode("latin1").decode("cp1252")
 		except Exception:
 			pass
-		if six.PY2:
-			json = json.encode("utf8")
+		json = json.encode("utf8")
 	return json
 
 
@@ -850,8 +848,6 @@ query TitleReviewsRefine {
 	def gotReviews(self, response):
 		self["statusbar"].setText(_("Parsing reviews..."))
 		self.reviewsJSON = response.content
-		if six.PY3:
-			self.reviewsJSON = self.reviewsJSON.decode("utf8")
 		try:
 			reviews = loads(self.reviewsJSON)['data']['title']['reviews']['edges']
 		except Exception as e:
@@ -896,8 +892,6 @@ query TitleReviewsRefine {
 	def IMDBparse(self, response):
 		self["statusbar"].setText(_("IMDb Re-Download completed"))
 		self.json = response.content
-		if six.PY3:
-			self.json = self.json.decode("utf8")
 		if self.json.startswith('{"errors'):
 			self["detailslabel"].setText(_("IMDb title failed!"))
 			print("[IMDb] error getting title", self.json)
@@ -1061,7 +1055,7 @@ query TitleReviewsRefine {
 				outline = ""
 			summary_author = get(title, ("summaries", "edges", "node", "author"))
 			if summary_author:
-				summary += " \u2014" + summary_author
+				summary += " \xE2\x80\x94" + summary_author  # U+2014 em dash
 		synopsis = get(title, ("synopses", "edges", "node", "plotText", "plainText"))
 		keywords = " | ".join(get(k, ("node", "text")) for k in get(title, ("storylineKeywords", "edges"), []))
 		tagline = get(title, ("taglines", "edges", "node", "text"))
@@ -1407,9 +1401,6 @@ query TitleReviewsRefine {
 		self.reviews = []
 		self.spoilers = False
 		safeRemove("/tmp/poster.jpg", "/tmp/poster-big.jpg")
-		if not isinstance(self.eventName, six.string_types):
-			self["statusbar"].setText("")
-			return
 		if not self.eventName:
 			s = self.session.nav.getCurrentService()
 			info = s and s.info()
@@ -1505,7 +1496,7 @@ query TitleReviewsRefine {
 			endYear = get(x, ("releaseYear", "endYear"))
 			if config.plugins.imdb.showlongmenuinfo.value:
 				typ = get(x, ("titleType", "text")) or ""
-				genres = "/".join(g["text"] for g in get(x, ("genres", "genres"), []))
+				genres = u"/".join(g["text"] for g in get(x, ("genres", "genres"), [])).encode("utf8")
 				runtime = get(x, ("runtime", "displayableProperty", "value", "plainText"))
 			else:
 				typ = genres = runtime = ""
@@ -1522,7 +1513,7 @@ query TitleReviewsRefine {
 			if typ:
 				extras.append(typ)
 			if genres:
-				extras.append(six.ensure_str(genres))
+				extras.append(genres)
 			if extras:
 				title += " (%s)" % "; ".join(extras)
 			plot = get(x, ("plot", "plotText", "plainText"))
@@ -1688,10 +1679,7 @@ def movielistSearch(session, serviceref, **kwargs):
 	eventName = info and info.getName(serviceref) or ''
 	(root, ext) = splitext(eventName)
 	if ext in KNOWN_EXTENSIONS or ext in KNOWN_EXTENSIONS2:
-		if six.PY2:
-			root = root.decode("utf8")
-			eventName = sub(r"[\W_]+", ' ', root, 0, LOCALE | UNICODE)
-			eventName = eventName.encode("utf8")
-		else:
-			eventName = sub(r"[\W_]+", ' ', root, 0)
+		root = root.decode("utf8")
+		eventName = sub(r"[\W_]+", ' ', root, 0, LOCALE | UNICODE)
+		eventName = eventName.encode("utf8")
 	session.open(IMDB, eventName)
